@@ -12,7 +12,6 @@ object Repl {
 
   type Parser = PartialFunction[Int, Action]
   def Parser(p: Parser): Parser = p
-  type Screen = ReplState ⇒ String
 
   case class ReplState(errors: Seq[Problem], warnings: Seq[Problem])
 
@@ -34,7 +33,7 @@ object Repl {
   }
   case class SetParser(parser: Parser) extends Action
   case class Observe(state: ReplState => Action) extends Action
-  case class SetScreen(screen: Screen) extends Action
+  case class SetScreen(screen: String) extends Action
   case class Alert(text: String) extends Action
   case object Quit extends Action
 
@@ -49,7 +48,7 @@ object Repl {
 
     var state = ReplState(Nil, Nil)
     var parser: Parser = null
-    var screen: Screen = null
+    var screen = ""
     case class ObservationEntry(f: ReplState => Action, lastAction: Action)
     var observers: Seq[ObservationEntry] = Nil
 
@@ -58,7 +57,7 @@ object Repl {
     def redraw() = {
       import ANSI._
 
-      scala.Console.out.print(TOPLEFT + CLEAR + screen(state))
+      scala.Console.out.print(TOPLEFT + CLEAR + screen)
     }
 
     def runAction(action: Action): Boolean = action match {

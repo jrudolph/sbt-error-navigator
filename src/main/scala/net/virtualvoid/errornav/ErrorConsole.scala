@@ -11,7 +11,7 @@ object ErrorConsole {
     case 't' => byErrorType
     case 's' => bySubject
     case 'm' => byMessage
-    case 'l' ⇒ errorList
+    case 'a' ⇒ allErrors
   }
 
   val byFile = by(_.position.sourcePath.getOrElse("<Unknown>"))(identity)
@@ -21,39 +21,49 @@ object ErrorConsole {
 
   def by[T](key: Problem => T)(print: T => String) = byMany(k => Seq(key(k)))(print)
   def byMany[T](key: Problem => Seq[T])(print: T => String) =
-    SetScreen { s ⇒
+    Observe { s ⇒
       val grouped =
         s.errors.flatMap(key).groupBy(identity).mapValues(_.size).toSeq.sortBy(-_._2)
-      def fileLine(l: (T, Int)): String = f"${l._2}%4d ${print(l._1)}%s\n"
+      def fileLine(l: ((T, Int), Option[Char])): String = l match {
+        case ((t, num), key) => f"${key.map(_ + ")").getOrElse("  ")}%s $num%4d ${print(t)}%s\n"
+      }
+      def charFor(idx: Int): Option[Char] = Some(idx).filter(_ < 10).map(i => ('0' + i).toChar)
+      val indexed = grouped.zipWithIndex.map(x => (x._1, charFor(x._2)))
 
-      s"""${s.errors.size} problems
-         |
-         |${grouped.map(fileLine).mkString}
-         |""".stripMargin
+      SetScreen(
+        s"""${s.errors.size} problems
+           |
+           |${indexed.map(fileLine).mkString}
+           |""".stripMargin) ~
+      SetParser(Parser {
+        case Digit(i) if i <= indexed.size =>
+          val k = grouped(i)._1
+          Observe(s => errorList(s.errors.filter(e => key(e).contains(k)), print(k)))
+      } orElse mainMenu)
+    }
 
-    } ~ SetParser(mainMenu)
+  val allErrors = Observe(s => errorList(s.errors, "all"))
 
-  val errorList =
-    SetScreen { s ⇒
+  def errorList(errors: Seq[Problem], name: String) =
+    SetScreen {
       def problemLine(p: (Problem, Int)): String = p match {
         case (p, idx) ⇒ s"${idx}) ${print(p.position, p.message)}\n"
       }
 
-      s"""${s.errors.size} problems
+      s"""${errors.size} problems ($name)
          |
-         |${s.errors.take(10).zipWithIndex.map(problemLine).mkString}
+         |${errors.take(10).zipWithIndex.map(problemLine).mkString}
          |""".stripMargin
-    } ~ Observe { s =>
+    } ~
       SetParser(Parser {
-        case Digit(d) if d <= s.errors.size ⇒
+        case Digit(d) if d <= errors.size ⇒
           import sys._
-          val problem = s.errors(d)
+          val problem = errors(d)
           val cmdLine = s"/home/johannes/bin/run-idea.sh --line ${problem.position.line.get} ${problem.position.sourcePath().get}"
           //println(cmdLine)
           cmdLine.!
           Action.noAction
       } orElse mainMenu)
-    }
 
   object Digit {
     def unapply(i: Int): Option[Int] =
