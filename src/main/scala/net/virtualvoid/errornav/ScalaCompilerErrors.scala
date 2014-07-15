@@ -6,9 +6,9 @@ sealed trait CompilationError extends Product {
 object CompilationError {
   val NotFoundP = """not found: (.*)""".r
   val NotAMemberP = """(.+) is not a member of (.+)""".r
-  val ImplicitValueNotFoundP = """could not find implicit value for parameter (.*): (.*)""".r
+  val ImplicitValueNotFoundP = """could not find implicit value for parameter ([^:]*): (.*)""".r
   val ImplicitEvidenceValueNotFoundP = """could not find implicit value for evidence parameter of type (.*)""".r
-  val TooManyArgumentsP = """too many arguments for method (.*): (.*)""".r
+  val TooManyArgumentsP = """too many arguments for method ([^:]*): (.*)""".r
   val TypeMismatchP = """type mismatch;
                         | found   : (.*)
                         | required: (.*)""".stripMargin.r
