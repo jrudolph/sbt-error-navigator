@@ -116,11 +116,13 @@ object ErrorNavigator {
   }
 
   val ErrorNav = config("errornav")
+  val ErrorNavTest = config("errornavtest")
 
   def settings =
-    Seq(
-      commands += errorNavigator) ++
-      inConfig(ErrorNav)(Defaults.compileSettings ++ Seq(
-        Access.compilerReporter in compile := Some(MyReporter),
-        compileInputs in compile <<= compileInputs in compile in Compile))
+    Seq(commands += errorNavigator) ++ forConfig(ErrorNav, Compile, Defaults.compileSettings) ++ forConfig(ErrorNavTest, Test, Defaults.testSettings)
+
+  def forConfig(config: Configuration, oldConfig: Configuration, defaultSettings: Seq[Setting[_]]) =
+    inConfig(config)(defaultSettings ++ Seq(
+      Access.compilerReporter in compile := Some(MyReporter),
+      compileInputs in compile <<= compileInputs in compile in oldConfig))
 }
