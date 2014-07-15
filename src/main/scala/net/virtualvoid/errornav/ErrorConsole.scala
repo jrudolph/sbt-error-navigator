@@ -36,7 +36,7 @@ object ErrorConsole {
            |${indexed.map(fileLine).mkString}
            |""".stripMargin) ~
       SetParser(Parser {
-        case Digit(i) if i <= indexed.size =>
+        case Digit(i) if i < indexed.size =>
           val k = grouped(i)._1
           Observe(s => errorList(s.errors.filter(e => key(e).contains(k)), print(k)))
       } orElse mainMenu)
@@ -56,7 +56,7 @@ object ErrorConsole {
          |""".stripMargin
     } ~
       SetParser(Parser {
-        case Digit(d) if d <= errors.size ⇒
+        case Digit(d) if d < errors.size ⇒
           import sys._
           val problem = errors(d)
           val cmdLine = s"/home/johannes/bin/run-idea.sh --line ${problem.position.line.get} ${problem.position.sourcePath().get}"
