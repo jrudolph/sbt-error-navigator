@@ -8,18 +8,27 @@ object ErrorConsole {
 
   val mainMenu: Parser = {
     case 'f' ⇒ byFile
+    case 't' => byErrorType
+    case 's' => bySubject
+    case 'm' => byMessage
     case 'l' ⇒ errorList
   }
 
-  val byFile =
+  val byFile = by(_.position.sourcePath.getOrElse("<Unknown>"))(identity)
+  val byErrorType = by(p => CompilationError.parse(p.message()).productPrefix)(identity)
+  val bySubject = byMany(p => CompilationError.parse(p.message()).subjects)(identity)
+  val byMessage = by(_.message)(identity)
+
+  def by[T](key: Problem => T)(print: T => String) = byMany(k => Seq(key(k)))(print)
+  def byMany[T](key: Problem => Seq[T])(print: T => String) =
     SetScreen { s ⇒
-      val byFile =
-        s.errors.groupBy(_.position.sourcePath.getOrElse("<Unknown>")).mapValues(_.size).toSeq.sortBy(-_._2)
-      def fileLine(l: (String, Int)): String = f"${l._2}%4d ${l._1}%s\n"
+      val grouped =
+        s.errors.flatMap(key).groupBy(identity).mapValues(_.size).toSeq.sortBy(-_._2)
+      def fileLine(l: (T, Int)): String = f"${l._2}%4d ${print(l._1)}%s\n"
 
       s"""${s.errors.size} problems
          |
-         |${byFile.map(fileLine).mkString}
+         |${grouped.map(fileLine).mkString}
          |""".stripMargin
 
     } ~ SetParser(mainMenu)
