@@ -7,11 +7,11 @@ object ErrorConsole {
   import Repl._
 
   val mainMenu: Parser = {
-    case 'O' ⇒ overview
-    case 'E' ⇒ top10
+    case 'f' ⇒ byFile
+    case 'l' ⇒ errorList
   }
 
-  val overview =
+  val byFile =
     SetScreen { s ⇒
       val byFile =
         s.errors.groupBy(_.position.sourcePath.getOrElse("<Unknown>")).mapValues(_.size).toSeq.sortBy(-_._2)
@@ -24,7 +24,7 @@ object ErrorConsole {
 
     } ~ SetParser(mainMenu)
 
-  val top10 =
+  val errorList =
     SetScreen { s ⇒
       def problemLine(p: (Problem, Int)): String = p match {
         case (p, idx) ⇒ s"${idx}) ${print(p.position, p.message)}\n"
@@ -34,15 +34,17 @@ object ErrorConsole {
          |
          |${s.errors.take(10).zipWithIndex.map(problemLine).mkString}
          |""".stripMargin
-    } ~ SetStateParser(s ⇒ Parser {
-      case Digit(d) if d <= s.errors.size ⇒
-        import sys._
-        val problem = s.errors(d)
-        val cmdLine = s"/home/johannes/bin/run-idea.sh --line ${problem.position.line.get} ${problem.position.sourcePath().get}"
-        //println(cmdLine)
-        cmdLine.!
-        Action.noAction
-    } orElse mainMenu)
+    } ~ Observe { s =>
+      SetParser(Parser {
+        case Digit(d) if d <= s.errors.size ⇒
+          import sys._
+          val problem = s.errors(d)
+          val cmdLine = s"/home/johannes/bin/run-idea.sh --line ${problem.position.line.get} ${problem.position.sourcePath().get}"
+          //println(cmdLine)
+          cmdLine.!
+          Action.noAction
+      } orElse mainMenu)
+    }
 
   object Digit {
     def unapply(i: Int): Option[Int] =

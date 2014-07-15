@@ -83,7 +83,7 @@ object ErrorNavigator {
       MyReporter.reset()
     } else {
       new Thread {
-        override def run(): Unit = Repl.repl(ErrorConsole.overview, new Repl.Watcher {
+        override def run(): Unit = Repl.repl(ErrorConsole.byFile, new Repl.Watcher {
           def poll(): Option[Seq[Problem]] = ErrorNavigator.poll()
 
           def terminate(): Unit = terminateWatch.set(true)
